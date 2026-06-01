@@ -1,79 +1,56 @@
-name: Build Windows RustDesk (Official Script)
-on: workflow_dispatch
+name: Build Windows RustDesk
 
-env:
-  VERSION: 1.0.0
-
+on:
+  workflow_dispatch:  # 手动触发
+    
 jobs:
-  build:
+  build-for-windows-flutter:
     runs-on: windows-2022
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout source code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          submodules: true
+          submodules: recursive
 
-      # 1. 安装 Python
-      - name: Install Python
-        uses: actions/setup-python@v4
+      - name: Install flutter
+        uses: subosito/flutter-action@2783a3f08e1baf891508463f8c6653c258246225
         with:
-          python-version: '3.11'
+          channel: "stable"
+          flutter-version: "3.24.5"
 
-      # 2. 安装 Rust
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      # 3. 安装 LLVM/Clang
-      - name: Install LLVM
+      - name: Replace engine with rustdesk custom flutter engine
         run: |
-          choco install llvm -y
-          echo "LIBCLANG_PATH=C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          flutter doctor -v
+          flutter precache --windows
+          Invoke-WebRequest -Uri https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip -OutFile windows-x64-release.zip
+          Expand-Archive -Path windows-x64-release.zip -DestinationPath windows-x64-release
+          mv -Force windows-x64-release/*  C:/hostedtoolcache/windows/flutter/stable-3.24.5-x64/bin/cache/artifacts/engine/windows-x64-release/
 
-      # 4. 安装 vcpkg
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
+        with:
+          toolchain: "1.75"
+          targets: x86_64-pc-windows-msvc
+          components: "rustfmt"
+
       - name: Setup vcpkg
-        run: |
-          git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
-          cd C:\vcpkg
-          .\bootstrap-vcpkg.bat -disableMetrics
+        uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2
+        with:
+          vcpkgDirectory: C:\vcpkg
+          vcpkgGitCommitId: "120deac3062162151622ca4860575a33844ba10b"
+          doNotCache: false
 
-      # 5. 安装所有 C++ 依赖
       - name: Install vcpkg dependencies
         run: |
-          cd C:\vcpkg
-          .\vcpkg.exe install --triplet x64-windows-static aom:x64-windows-static opus:x64-windows-static libjpeg-turbo:x64-windows-static libvpx:x64-windows-static libyuv:x64-windows-static
-          echo "VCPKG_ROOT=C:\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          echo "VCPKGRS_DYNAMIC=0" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $VCPKG_ROOT/vcpkg install --triplet x64-windows-static --x-install-root="$VCPKG_ROOT/installed"
+        shell: bash
 
-      # 6. 安装 Flutter
-      - name: Install Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: 3.44.0
-
-      # 7. 使用 build.py 脚本构建
-      - name: Build with build.py
-        env:
-          VCPKG_ROOT: C:\vcpkg
-          VCPKGRS_DYNAMIC: 0
-          LIBCLANG_PATH: C:\Program Files\LLVM\bin
+      - name: Build rustdesk
         run: |
-          python build.py --flutter --skip-portable-pack
+          python3 .\build.py --flutter --hwcodec --vram --skip-portable-pack
 
-      # 8. 安装 NSIS
-      - name: Install NSIS
-        run: |
-          choco install nsis -y
-
-      # 9. 生成 EXE 安装包
-      - name: Build Installer
-        run: |
-          "C:\Program Files (x86)\NSIS\makensis.exe" /V4 /DVERSION=${{ env.VERSION }} installer.nsi
-
-      # 10. 上传产物
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: RustDesk-Windows
-          path: |
-            flutter/build/windows/x64/runner/Release/flutter_hbb.exe
-            RustDesk-Setup-*.exe
+          name: rustdesk-windows
+          path: flutter/build/windows/x64/runner/Release/
