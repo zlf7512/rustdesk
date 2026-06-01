@@ -20,14 +20,32 @@ jobs:
         with:
           flutter-version: 3.22.2
 
-      # 3. 用 cmd 运行官方 build.bat，一次性编译 Rust + Flutter
-      - name: Build using official script
+      # 3. 构建 Flutter UI
+      - name: Build Flutter
         run: |
-          cmd /c build.bat --flutter --release
+          flutter config --enable-windows-desktop
+          flutter build windows --release
 
-      # 4. 上传产物
-      - name: Upload EXE
+      # 4. 构建 Rust
+      - name: Build Rust
+        run: |
+          cargo build --release
+
+      # 5. 生成 NSIS 安装包
+      - name: Build Installer
+        run: |
+          # 需要先安装 NSIS
+          choco install nsis -y
+          
+          # 编译 NSI 脚本生成 EXE 安装包
+          # 假设你有一个 installer.nsi 文件
+          "C:\Program Files (x86)\NSIS\makensis.exe" installer.nsi
+
+      # 6. 上传产物
+      - name: Upload EXE Installer
         uses: actions/upload-artifact@v4
         with:
-          name: RustDesk-Windows
-          path: target/release/rustdesk.exe
+          name: RustDesk-Windows-Installer
+          path: |
+            *.exe
+            RustDesk-Setup-*.exe
