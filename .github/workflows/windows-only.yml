@@ -13,36 +13,48 @@ jobs:
         with:
           submodules: true
 
-      # 1. 安装 Rust
+      # 1. 安装 VCPKG
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgDirectory: '${{ runner.workspace }}/b/vcpkg'
+          vcpkgGitCommitId: 'a1a1cbc975f912220b237def74ce27d6a1a14eab'
+
+      # 2. 安装依赖
+      - name: Install dependencies
+        run: |
+          vcpkg integrate install
+          vcpkg install opus:x64-windows
+
+      # 3. 设置 VCPKG_ROOT
+      - name: Set VCPKG_ROOT
+        run: |
+          echo "VCPKG_ROOT=${{ runner.workspace }}/b/vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      # 4. 安装 Rust
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      # 2. 安装 flutter_rust_bridge_codegen
-      - name: Install flutter_rust_bridge_codegen
-        run: |
-          cargo install flutter_rust_bridge_codegen
-
-      # 3. 安装 Flutter
+      # 5. 安装 Flutter
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.44.0
 
-      # 4. 生成 Rust FFI 绑定
+      # 6. 生成 FFI 绑定
       - name: Generate Rust FFI bridge
         run: |
           cd flutter
           flutter pub get
-          # 使用 pubspec.yaml 中的配置生成
           dart run build_runner build --delete-conflicting-outputs
           cd ..
 
-      # 5. 编译 Rust
+      # 7. 编译 Rust
       - name: Build Rust
         run: |
           cargo build --release
 
-      # 6. 构建 Flutter UI
+      # 8. 构建 Flutter UI
       - name: Build Flutter
         run: |
           cd flutter
@@ -51,17 +63,17 @@ jobs:
           flutter build windows --release
           cd ..
 
-      # 7. 安装 NSIS
+      # 9. 安装 NSIS
       - name: Install NSIS
         run: |
           choco install nsis -y
 
-      # 8. 生成 EXE 安装包
+      # 10. 生成 EXE 安装包
       - name: Build Installer
         run: |
           "C:\Program Files (x86)\NSIS\makensis.exe" /V4 /DVERSION=${{ env.VERSION }} installer.nsi
 
-      # 9. 上传产物
+      # 11. 上传产物
       - name: Upload EXE Installer
         uses: actions/upload-artifact@v4
         with:
