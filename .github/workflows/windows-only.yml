@@ -1,4 +1,4 @@
-name: Build Windows RustDesk (Final)
+name: Build Windows RustDesk (Official Script)
 on: workflow_dispatch
 
 jobs:
@@ -10,42 +10,24 @@ jobs:
         with:
           submodules: true
 
-      - name: Install vcpkg
-        run: |
-          git clone https://github.com/microsoft/vcpkg C:\vcpkg
-          C:\vcpkg\bootstrap-vcpkg.bat
-          echo "VCPKG_ROOT=C:\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
-
-      # 关键：加上 --classic，强制经典模式
-      - name: Install opus via vcpkg
-        run: |
-          C:\vcpkg\vcpkg install "opus:x64-windows-static" --classic
-
+      # 1. 安装 Rust
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+      # 2. 安装 Flutter
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.22.2
 
-      - name: Build Rust Core
-        run: cargo build --release
-
-      - name: Prepare Flutter
+      # 3. 用 cmd 运行官方 build.bat，一次性编译 Rust + Flutter
+      - name: Build using official script
         run: |
-          cd flutter
-          flutter pub get
+          cmd /c build.bat --flutter --release
 
-      - name: Build Windows Client
-        run: |
-          cd flutter
-          flutter build windows --release
-
+      # 4. 上传产物
       - name: Upload EXE
         uses: actions/upload-artifact@v4
         with:
           name: RustDesk-Windows
-          path: |
-            target/release/rustdesk.exe
-            flutter/build/windows/x64/runner/Release/RustDesk.exe
+          path: target/release/rustdesk.exe
