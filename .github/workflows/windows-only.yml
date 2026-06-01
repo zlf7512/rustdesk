@@ -5,30 +5,29 @@ jobs:
   build:
     runs-on: windows-2022
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           submodules: true
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
 
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.24.0
+          flutter-version: 3.22.2
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install c++ build tools
+        uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Disable GitHub Cache (Fix 400 error)
-        run: echo "ACTIONS_CACHE_URL=" >> $GITHUB_ENV
-
-      - name: Build Windows Client
+      - name: Build RustDesk
         run: |
-          cd flutter
-          flutter pub get
-          flutter build windows --release
+          .\build.bat --flutter --release
 
       - name: Upload EXE
         uses: actions/upload-artifact@v4
         with:
-          name: RustDesk-Windows
-          path: flutter/build/windows/x64/runner/Release/RustDesk.exe
+          name: RustDesk-Windows-EXE
+          path: target/release/rustdesk.exe
