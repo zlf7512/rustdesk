@@ -17,26 +17,31 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      # 2. 安装 Flutter
+      # 2. 安装 flutter_rust_bridge_codegen
+      - name: Install flutter_rust_bridge_codegen
+        run: |
+          cargo install flutter_rust_bridge_codegen
+
+      # 3. 安装 Flutter
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.44.0
 
-      # 3. 生成 Rust FFI 绑定
+      # 4. 生成 Rust FFI 绑定
       - name: Generate Rust FFI bridge
         run: |
           cd flutter
           flutter pub get
-          flutter_rust_bridge_codegen --rust-input ../src/lib.rs --dart-output lib/generated_bridge.dart --dart-decl-output lib/generated_bridge.freezed.dart
+          flutter_rust_bridge_codegen --rust-input ../src/lib.rs --dart-output lib/generated_bridge.dart
           cd ..
 
-      # 4. 编译 Rust
+      # 5. 编译 Rust
       - name: Build Rust
         run: |
           cargo build --release
 
-      # 5. 构建 Flutter UI
+      # 6. 构建 Flutter UI
       - name: Build Flutter
         run: |
           cd flutter
@@ -45,17 +50,17 @@ jobs:
           flutter build windows --release
           cd ..
 
-      # 6. 安装 NSIS
+      # 7. 安装 NSIS
       - name: Install NSIS
         run: |
           choco install nsis -y
 
-      # 7. 生成 EXE 安装包
+      # 8. 生成 EXE 安装包
       - name: Build Installer
         run: |
           "C:\Program Files (x86)\NSIS\makensis.exe" /V4 /DVERSION=${{ env.VERSION }} installer.nsi
 
-      # 8. 上传产物
+      # 9. 上传产物
       - name: Upload EXE Installer
         uses: actions/upload-artifact@v4
         with:
