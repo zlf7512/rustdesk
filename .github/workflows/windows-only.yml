@@ -23,28 +23,46 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      # 3. 安装 Flutter
+      # 3. 安装 vcpkg
+      - name: Setup vcpkg
+        run: |
+          git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
+          cd C:\vcpkg
+          .\bootstrap-vcpkg.bat -disableMetrics
+
+      # 4. 安装 C++ 依赖
+      - name: Install vcpkg dependencies
+        run: |
+          cd C:\vcpkg
+          .\vcpkg.exe install --triplet x64-windows-static opus:x64-windows-static libjpeg-turbo:x64-windows-static libvpx:x64-windows-static
+          echo "VCPKG_ROOT=C:\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "VCPKGRS_DYNAMIC=0" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      # 5. 安装 Flutter
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.44.0
 
-      # 4. 使用 build.py 脚本构建
+      # 6. 使用 build.py 脚本构建
       - name: Build with build.py
+        env:
+          VCPKG_ROOT: C:\vcpkg
+          VCPKGRS_DYNAMIC: 0
         run: |
           python build.py --flutter --skip-portable-pack
 
-      # 5. 安装 NSIS
+      # 7. 安装 NSIS
       - name: Install NSIS
         run: |
           choco install nsis -y
 
-      # 6. 生成 EXE 安装包
+      # 8. 生成 EXE 安装包
       - name: Build Installer
         run: |
           "C:\Program Files (x86)\NSIS\makensis.exe" /V4 /DVERSION=${{ env.VERSION }} installer.nsi
 
-      # 7. 上传产物
+      # 9. 上传产物
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
