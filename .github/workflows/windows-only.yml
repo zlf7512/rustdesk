@@ -11,23 +11,18 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
 
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.22.2
 
-      - name: Install c++ build tools
-        uses: ilammy/msvc-dev-cmd@v1
-
-      - name: Build RustDesk
+      - name: Build RustDesk Windows
         run: |
-          .\build.bat --flutter --release
+          cmd /c build.bat --flutter --release
 
       - name: Upload EXE
         uses: actions/upload-artifact@v4
         with:
-          name: RustDesk-Windows-EXE
+          name: RustDesk-Windows
           path: target/release/rustdesk.exe
