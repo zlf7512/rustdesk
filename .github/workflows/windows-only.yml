@@ -1,4 +1,4 @@
-name: Build Windows RustDesk (Final)
+name: Build Windows RustDesk (Final Fixed)
 on: workflow_dispatch
 
 jobs:
@@ -17,10 +17,10 @@ jobs:
           C:\vcpkg\bootstrap-vcpkg.bat
           echo "VCPKG_ROOT=C:\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      # 2. 用 vcpkg 安装 opus（关键！解决头文件缺失）
+      # 2. 安装 opus（关键：给包名加引号，避开 PowerShell 语法问题）
       - name: Install opus via vcpkg
         run: |
-          C:\vcpkg\vcpkg install opus:x64-windows-static
+          C:\vcpkg\vcpkg install "opus:x64-windows-static"
 
       # 3. 安装 Rust
       - name: Install Rust
@@ -32,7 +32,7 @@ jobs:
         with:
           flutter-version: 3.22.2
 
-      # 5. 编译 Rust 核心（现在能找到 opus 头文件了）
+      # 5. 编译 Rust 核心
       - name: Build Rust Core
         run: cargo build --release
 
