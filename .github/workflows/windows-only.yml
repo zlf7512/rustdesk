@@ -23,35 +23,26 @@ jobs:
         with:
           flutter-version: 3.44.0
 
-      # 3. 清理并生成 FFI 绑定
-      - name: Generate FFI bindings
-        run: |
-          cd flutter
-          flutter clean
-          flutter pub get
-          dart run ffigen  # 重新生成 native_model FFI 绑定
-          cd ..
-
-      # 4. 构建 Flutter UI
+      # 3. 构建 Flutter UI（不需要单独运行 ffigen，编译时自动生成）
       - name: Build Flutter
         run: |
           cd flutter
           flutter config --enable-windows-desktop
           flutter pub get
-          flutter build windows --release
+          flutter build windows --release 2>&1
           cd ..
 
-      # 5. 安装 NSIS
+      # 4. 安装 NSIS
       - name: Install NSIS
         run: |
           choco install nsis -y
 
-      # 6. 生成 EXE 安装包
+      # 5. 生成 EXE 安装包
       - name: Build Installer
         run: |
           "C:\Program Files (x86)\NSIS\makensis.exe" /V4 /DVERSION=${{ env.VERSION }} installer.nsi
 
-      # 7. 上传产物
+      # 6. 上传产物
       - name: Upload EXE Installer
         uses: actions/upload-artifact@v4
         with:
