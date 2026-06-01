@@ -1,6 +1,9 @@
 name: Build Windows RustDesk (Official Script)
 on: workflow_dispatch
 
+env:
+  VERSION: 1.0.0
+
 jobs:
   build:
     runs-on: windows-2022
@@ -27,28 +30,21 @@ jobs:
           flutter config --enable-windows-desktop
           flutter pub get
           flutter build windows --release
+          cd ..
 
-      # 4. 构建 Rust（可选，取决于你的项目结构）
-      - name: Build Rust
-        run: |
-          cargo build --release
-
-      # 5. 生成 EXE 安装包（使用 NSIS）
+      # 4. 安装 NSIS
       - name: Install NSIS
         run: |
           choco install nsis -y
 
+      # 5. 生成 EXE 安装包
       - name: Build Installer
         run: |
-          # 编译 NSI 脚本生成 EXE 安装包
-          # 假设项目中有 installer.nsi 或类似的文件
-          "C:\Program Files (x86)\NSIS\makensis.exe" /V4 installer.nsi
+          "C:\Program Files (x86)\NSIS\makensis.exe" /V4 /DVERSION=${{ env.VERSION }} installer.nsi
 
       # 6. 上传产物
       - name: Upload EXE Installer
         uses: actions/upload-artifact@v4
         with:
           name: RustDesk-Windows-Installer
-          path: |
-            *.exe
-            RustDesk-Setup-*.exe
+          path: RustDesk-Setup-*.exe
