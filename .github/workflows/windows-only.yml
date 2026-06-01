@@ -13,28 +13,43 @@ jobs:
         with:
           submodules: true
 
-      # 1. 安装 Rust
+      # 1. 缓存 vcpkg
+      - name: Restore vcpkg cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            C:\vcpkg
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg.json') }}
+          restore-keys: |
+            ${{ runner.os }}-vcpkg-
+
+      # 2. 初始化 vcpkg
+      - name: Setup vcpkg
+        run: |
+          git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
+          cd C:\vcpkg
+          .\bootstrap-vcpkg.bat
+          echo "VCPKG_ROOT=C:\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      # 3. 安装 C++ 依赖
+      - name: Install vcpkg dependencies
+        run: |
+          cd ${{ github.workspace }}
+          C:\vcpkg\vcpkg.exe install --triplet x64-windows-static
+
+      # 4. 安装 Rust
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      # 2. 安装编译所需工具和库
-      - name: Install build dependencies
-        run: |
-          choco install llvm -y
-          choco install nasm -y
-
-      # 3. 设置编译环境变量
-      - name: Setup build environment
-        run: |
-          echo "LIBCLANG_PATH=C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-
-      # 4. 安装 Flutter
+      # 5. 安装 Flutter
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.44.0
 
-      # 5. 生成 FFI 绑定
+      # 6. 生成 FFI 绑定
       - name: Generate Rust FFI bridge
         run: |
           cd flutter
@@ -42,12 +57,14 @@ jobs:
           dart run build_runner build --delete-conflicting-outputs
           cd ..
 
-      # 6. 编译 Rust
+      # 7. 编译 Rust
       - name: Build Rust
+        env:
+          VCPKG_ROOT: C:\vcpkg
         run: |
           cargo build --release
 
-      # 7. 构建 Flutter UI
+      # 8. 构建 Flutter UI
       - name: Build Flutter
         run: |
           cd flutter
@@ -56,17 +73,17 @@ jobs:
           flutter build windows --release
           cd ..
 
-      # 8. 安装 NSIS
+      # 9. 安装 NSIS
       - name: Install NSIS
         run: |
           choco install nsis -y
 
-      # 9. 生成 EXE 安装包
+      # 10. 生成 EXE 安装包
       - name: Build Installer
         run: |
           "C:\Program Files (x86)\NSIS\makensis.exe" /V4 /DVERSION=${{ env.VERSION }} installer.nsi
 
-      # 10. 上传产物
+      # 11. 上传产物
       - name: Upload EXE Installer
         uses: actions/upload-artifact@v4
         with:
