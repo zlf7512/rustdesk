@@ -5,7 +5,8 @@ jobs:
   build:
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           submodules: true
 
@@ -17,12 +18,24 @@ jobs:
         with:
           flutter-version: 3.22.2
 
-      - name: Build RustDesk Windows
+      - name: Verify files and build
         run: |
-          cmd /c build.bat --flutter --release
+          dir
+          if exist build.bat (
+            echo Found build.bat
+            cmd /c build.bat --flutter --release
+          ) else (
+            echo build.bat not found, trying direct build
+            cargo build --release
+            cd flutter
+            flutter pub get
+            flutter build windows --release
+          )
 
       - name: Upload EXE
         uses: actions/upload-artifact@v4
         with:
           name: RustDesk-Windows
-          path: target/release/rustdesk.exe
+          path: |
+            target/release/rustdesk.exe
+            flutter/build/windows/x64/runner/Release/RustDesk.exe
