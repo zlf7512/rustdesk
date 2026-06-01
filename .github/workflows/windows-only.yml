@@ -1,4 +1,4 @@
-name: Build Windows RustDesk (Full VCPKG)
+name: Build Windows RustDesk (Final)
 on: workflow_dispatch
 
 jobs:
@@ -10,41 +10,45 @@ jobs:
         with:
           submodules: true
 
-      # 1. 安装 vcpkg 并设置环境变量
+      # 1. 安装 vcpkg
       - name: Install vcpkg
         run: |
           git clone https://github.com/microsoft/vcpkg C:\vcpkg
           C:\vcpkg\bootstrap-vcpkg.bat
-          echo "VCPKG_ROOT=C:\vcpkg" >> $env:GITHUB_ENV
           echo "VCPKG_ROOT=C:\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      # 2. 安装 Rust
+      # 2. 用 vcpkg 安装 opus（关键！解决头文件缺失）
+      - name: Install opus via vcpkg
+        run: |
+          C:\vcpkg\vcpkg install opus:x64-windows-static
+
+      # 3. 安装 Rust
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      # 3. 安装 Flutter
+      # 4. 安装 Flutter
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.22.2
 
-      # 4. 编译 Rust 核心（现在能找到 VCPKG_ROOT 了）
+      # 5. 编译 Rust 核心（现在能找到 opus 头文件了）
       - name: Build Rust Core
         run: cargo build --release
 
-      # 5. 准备 Flutter 环境
+      # 6. 准备 Flutter 环境
       - name: Prepare Flutter
         run: |
           cd flutter
           flutter pub get
 
-      # 6. 编译 Windows 客户端
+      # 7. 编译 Windows 客户端
       - name: Build Windows Client
         run: |
           cd flutter
           flutter build windows --release
 
-      # 7. 上传产物
+      # 8. 上传产物
       - name: Upload EXE
         uses: actions/upload-artifact@v4
         with:
