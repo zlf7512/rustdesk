@@ -1,4 +1,4 @@
-name: Build Windows RustDesk
+name: Build Windows RustDesk (PowerShell)
 on: workflow_dispatch
 
 jobs:
@@ -18,20 +18,23 @@ jobs:
         with:
           flutter-version: 3.22.2
 
-      - name: Verify files and build
-        run: |
-          dir
-          if exist build.bat (
-            echo Found build.bat
-            cmd /c build.bat --flutter --release
-          ) else (
-            echo build.bat not found, trying direct build
-            cargo build --release
-            cd flutter
-            flutter pub get
-            flutter build windows --release
-          )
+      # 第一步：先编译 Rust，生成桥接文件
+      - name: Build Rust Core
+        run: cargo build --release
 
+      # 第二步：进入 Flutter 目录，下载依赖
+      - name: Prepare Flutter
+        run: |
+          cd flutter
+          flutter pub get
+
+      # 第三步：编译 Windows 客户端
+      - name: Build Windows Client
+        run: |
+          cd flutter
+          flutter build windows --release
+
+      # 第四步：上传所有可能的产物
       - name: Upload EXE
         uses: actions/upload-artifact@v4
         with:
