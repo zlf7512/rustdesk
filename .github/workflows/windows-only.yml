@@ -17,11 +17,11 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      # 2. 安装 Flutter
+      # 2. 安装 Flutter (更新到 3.44.0)
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.22.2
+          flutter-version: 3.44.0
 
       # 3. 构建 Flutter UI
       - name: Build Flutter
